@@ -29,6 +29,7 @@ impl App {
 #[derive(Serialize, Deserialize)]
 pub struct AppData {
     pub channels: StatefulList<Channel>,
+    pub messages: StatefulList<Message>,
     pub input: String,
     #[serde(skip)]
     pub input_cursor: usize,
@@ -86,8 +87,29 @@ impl AppData {
             channels.state.select(Some(0));
         }
 
+        let messages: Vec<_> = channels
+            .state
+            .selected()
+            .and_then(|idx| channels.items.get(idx))
+            .map(|channel| &channel.messages[..])
+            .unwrap_or(&[])
+            .iter()
+            .map(|msg| Message {
+                from: msg.from.clone(),
+                message: msg.message.clone(),
+                attachments: msg.attachments.clone(),
+                arrived_at: msg.arrived_at,
+            })
+            .collect();
+
+        let mut messages = StatefulList::with_items(messages);
+        if !messages.items.is_empty() {
+            messages.state.select(Some(0));
+        }
+
         Ok(AppData {
             channels,
+            messages,
             input: String::new(),
             input_cursor: 0,
         })
@@ -152,6 +174,7 @@ impl App {
         let mut data = match AppData::load(&load_data_path) {
             Ok(data) => data,
             Err(_) => {
+                println!("Error loading data from data_path");
                 let client = signal::SignalClient::from_config(config.clone());
                 let data = AppData::init_from_signal(&client)?;
                 data.save(&config.data_path)?;
@@ -244,6 +267,14 @@ impl App {
             self.save().unwrap();
         }
         self.data.channels.next();
+    }
+
+    pub fn on_pgup(&mut self) {
+        //        self.data.messages.previous();
+    }
+
+    pub fn on_pgdn(&mut self) {
+        //        self.data.messages.next();
     }
 
     fn reset_unread_messages(&mut self) -> bool {

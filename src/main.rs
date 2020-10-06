@@ -78,6 +78,8 @@ async fn main() -> anyhow::Result<()> {
                 KeyCode::Up => app.on_up(),
                 KeyCode::Right => app.on_right(),
                 KeyCode::Down => app.on_down(),
+                KeyCode::PageUp => app.on_pgup(),
+                KeyCode::PageDown => app.on_pgdn(),
                 code => app.on_key(code),
             },
             Some(Event::Message { payload, message }) => {

@@ -101,7 +101,7 @@ fn draw_chat<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     );
 }
 
-fn draw_messages<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+fn draw_messages<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let messages = app
         .data
         .channels
@@ -186,7 +186,7 @@ fn draw_messages<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
         .block(Block::default().title("Messages").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .start_corner(Corner::BottomLeft);
-    f.render_widget(list, area);
+    f.render_stateful_widget(list, area, &mut app.data.messages.state);
 }
 
 // Randomly but deterministically choose a color for a username
