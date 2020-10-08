@@ -29,6 +29,7 @@ impl App {
 #[derive(Serialize, Deserialize)]
 pub struct AppData {
     pub channels: StatefulList<Channel>,
+    #[serde(skip)]
     pub messages: StatefulList<Message>,
     pub input: String,
     #[serde(skip)]
@@ -174,7 +175,6 @@ impl App {
         let mut data = match AppData::load(&load_data_path) {
             Ok(data) => data,
             Err(_) => {
-                println!("Error loading data from data_path");
                 let client = signal::SignalClient::from_config(config.clone());
                 let data = AppData::init_from_signal(&client)?;
                 data.save(&config.data_path)?;
