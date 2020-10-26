@@ -252,6 +252,7 @@ impl App {
 
         self.reset_unread_messages();
         self.bubble_up_channel(channel_idx);
+        self.load_messages();
         self.save().unwrap();
     }
 
@@ -260,6 +261,7 @@ impl App {
             self.save().unwrap();
         }
         self.data.channels.previous();
+        self.load_messages();
     }
 
     pub fn on_down(&mut self) {
@@ -267,14 +269,15 @@ impl App {
             self.save().unwrap();
         }
         self.data.channels.next();
+        self.load_messages();
     }
 
     pub fn on_pgup(&mut self) {
-        //        self.data.messages.previous();
+        self.data.messages.next();
     }
 
     pub fn on_pgdn(&mut self) {
-        //        self.data.messages.next();
+        self.data.messages.previous();
     }
 
     fn reset_unread_messages(&mut self) -> bool {
@@ -302,6 +305,32 @@ impl App {
         if let Some(log_file) = &mut self.log_file {
             writeln!(log_file, "{}", msg.as_ref()).unwrap();
         }
+    }
+
+    fn load_messages(&mut self) {
+        let messages: Vec<_> = self
+            .data
+            .channels
+            .state
+            .selected()
+            .and_then(|idx| self.data.channels.items.get(idx))
+            .map(|channel| &channel.messages[..])
+            .unwrap_or(&[])
+            .iter()
+            .map(|msg| Message {
+                from: msg.from.clone(),
+                message: msg.message.clone(),
+                attachments: msg.attachments.clone(),
+                arrived_at: msg.arrived_at,
+            })
+            .collect();
+
+        let mut messages = StatefulList::with_items(messages);
+        if !messages.items.is_empty() {
+            messages.state.select(Some(0));
+        }
+
+        self.data.messages = messages;
     }
 
     pub async fn on_message(
@@ -390,6 +419,7 @@ impl App {
         }
 
         self.bubble_up_channel(channel_idx);
+        self.load_messages();
         self.save().unwrap();
 
         Some(())
