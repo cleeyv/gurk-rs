@@ -2,7 +2,7 @@ use crate::signal;
 use crate::{app, App};
 
 use anyhow::Context;
-use chrono::Timelike;
+use chrono::{Datelike, Timelike};
 use tui::backend::Backend;
 use tui::layout::{Constraint, Corner, Direction, Layout, Rect};
 use tui::style::{Color, Style};
@@ -117,7 +117,12 @@ fn draw_messages<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
         let arrived_at = msg.arrived_at.with_timezone(&chrono::Local);
 
         let time = Span::styled(
-            format!("{:02}:{:02} ", arrived_at.hour(), arrived_at.minute()),
+            format!(
+                "{:02} {:02}:{:02} ",
+                arrived_at.weekday(),
+                arrived_at.hour(),
+                arrived_at.minute()
+            ),
             time_style,
         );
         let from = displayed_name(&msg.from, app.config.first_name_only);
