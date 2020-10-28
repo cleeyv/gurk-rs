@@ -65,6 +65,8 @@ async fn main() -> anyhow::Result<()> {
     let signal_client = signal::SignalClient::from_config(app.config.clone());
     tokio::spawn(async move { signal_client.stream_messages(tx).await });
 
+    //let mut dialog: bool = false;
+
     terminal.clear()?;
 
     loop {
@@ -78,6 +80,13 @@ async fn main() -> anyhow::Result<()> {
                 KeyCode::Up => app.on_up(),
                 KeyCode::Right => app.on_right(),
                 KeyCode::Down => app.on_down(),
+                KeyCode::Char('a') if event.modifiers.contains(KeyModifiers::CONTROL) => {
+                    //dialog = true;
+                    app.on_attach();
+                    let size = terminal.size().unwrap();
+                    terminal.resize(size)?;
+                    //dialog = false;
+                }
                 code => app.on_key(code),
             },
             Some(Event::Message { payload, message }) => {

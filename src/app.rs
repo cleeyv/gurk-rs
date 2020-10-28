@@ -6,6 +6,7 @@ use anyhow::Context;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
+use tinyfiledialogs;
 use unicode_width::UnicodeWidthStr;
 
 use std::fs::File;
@@ -264,6 +265,16 @@ impl App {
         if self.data.input_cursor < self.data.input.width() {
             self.data.input_cursor += 1;
         }
+    }
+
+    pub fn on_attach(&mut self) {
+        let open_file: String;
+        // TODO use the open_file_dialog_multi function
+        match tinyfiledialogs::open_file_dialog("Attach file", "", None) {
+            Some(file) => open_file = file,
+            None => open_file = "null".to_string(),
+        }
+        println!("Open file {:?}", open_file);
     }
 
     #[allow(dead_code)]
