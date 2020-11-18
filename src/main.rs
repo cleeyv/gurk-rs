@@ -18,11 +18,9 @@ use crossterm::{
 };
 use structopt::StructOpt;
 use tokio::stream::StreamExt;
-use tokio::sync::Notify;
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::Write;
-use std::sync::Arc;
 
 #[derive(Debug, StructOpt)]
 struct Args {
@@ -45,20 +43,21 @@ async fn main() -> anyhow::Result<()> {
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
-    let events = Arc::new(Notify::new());
-    let events2 = events.clone();
+    let (tx2, rx2) = std::sync::mpsc::channel();
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
     tokio::spawn({
         let mut tx = tx.clone();
         async move {
             let mut reader = EventStream::new().fuse();
-            while let Some(event) = reader.next().await {
-                events2.notified().await;
-                match event {
-                    Ok(CEvent::Key(key)) => tx.send(Event::Input(key)).await.unwrap(),
-                    Ok(CEvent::Resize(_, _)) => tx.send(Event::Resize).await.unwrap(),
-                    _ => (),
+            loop {
+                rx2.recv();
+                if let Some(event) = reader.next().await {
+                    match event {
+                        Ok(CEvent::Key(key)) => tx.send(Event::Input(key)).await.unwrap(),
+                        Ok(CEvent::Resize(_, _)) => tx.send(Event::Resize).await.unwrap(),
+                        _ => (),
+                    }
                 }
             }
         }
@@ -73,8 +72,8 @@ async fn main() -> anyhow::Result<()> {
     terminal.clear()?;
 
     loop {
-        events.notify();
         terminal.draw(|f| ui::draw(f, &mut app))?;
+        tx2.send(())?;
         match rx.recv().await {
             Some(Event::Input(event)) => match event.code {
                 KeyCode::Char('c') if event.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -85,21 +84,7 @@ async fn main() -> anyhow::Result<()> {
                 KeyCode::Right => app.on_right(),
                 KeyCode::Down => app.on_down(),
                 KeyCode::Char('a') if event.modifiers.contains(KeyModifiers::CONTROL) => {
-                    //let open_file: String;
-                    // TODO use the open_file_dialog_multi function
-                    //match tinyfiledialogs::open_file_dialog("Attach file", "", None) {
-                    //    Some(file) => open_file = file,
-                    //    None => open_file = "null".to_string(),
-                    //}
-                    //println!("Open file {:?}", open_file);
-                    //
-                    tokio::process::Command::new("dialog")
-                        //.args(&["--inputbox", "name:", "10", "40"])
-                        .args(&["--fselect", "./", "0", "60"])
-                        .spawn()
-                        .expect("Command failed to start")
-                        .await?;
-                    events.notify();
+                    app.on_attach().await;
                     let size = terminal.size().unwrap();
                     terminal.resize(size)?;
                 }

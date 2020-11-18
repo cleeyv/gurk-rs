@@ -267,7 +267,7 @@ impl App {
         }
     }
 
-    pub fn on_attach(&mut self) {
+    pub async fn on_attach(&mut self) {
         let open_file: String;
         // TODO use the open_file_dialog_multi function
         match tinyfiledialogs::open_file_dialog("Attach file", "", None) {
