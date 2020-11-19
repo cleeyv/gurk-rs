@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
-    let (tx2, rx2) = std::sync::mpsc::channel();
+    let (mut tx2, mut rx2) = tokio::sync::mpsc::channel(100);
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
     tokio::spawn({
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         async move {
             let mut reader = EventStream::new().fuse();
             loop {
-                rx2.recv();
+                rx2.recv().await.unwrap();
                 if let Some(event) = reader.next().await {
                     match event {
                         Ok(CEvent::Key(key)) => tx.send(Event::Input(key)).await.unwrap(),
@@ -74,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         terminal.draw(|f| ui::draw(f, &mut app))?;
-        tx2.send(())?;
+        tx2.send(()).await.unwrap();
         match rx.recv().await {
             Some(Event::Click(event)) => match event {
                 _ => {}
