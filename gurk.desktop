@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Gurk
+Comment=Signal Messenger client for terminal
+Icon=/usr/share/icons/hicolor/64x64/apps/gurk.png
+Exec=/usr/bin/gurk
+Terminal=true
+Categories=Network;InstantMessaging;
+
+# sudo cp gurk.desktop /usr/share/applications/gurk.desktop
+# sudo cp gurk.png /usr/share/icons/hicolor/64x64/apps/gurk.png
+# sudo ln -s /home/$USER/.cargo/bin/gurk /usr/bin/gurk
