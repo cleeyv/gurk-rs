@@ -307,7 +307,7 @@ impl App {
         }
     }
 
-    fn load_messages(&mut self) {
+    pub fn load_messages(&mut self) {
         let messages: Vec<_> = self
             .data
             .channels

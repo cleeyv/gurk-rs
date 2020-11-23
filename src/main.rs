@@ -34,6 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::from_args();
 
     let mut app = App::try_new(args.verbose)?;
+    app.load_messages();
 
     enable_raw_mode()?;
     let _raw_mode_guard = scopeguard::guard((), |_| {
