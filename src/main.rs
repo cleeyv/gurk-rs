@@ -88,6 +88,7 @@ async fn main() -> anyhow::Result<()> {
                                     app.save().unwrap();
                                 }
                                 app.data.channels.state.select(Some(target));
+                                app.load_messages();
                                 app.data.chanpos.upside =
                                     target as u16 - app.data.chanpos.top as u16;
                                 app.data.chanpos.downside = terminal.get_frame().size().height
