@@ -24,7 +24,7 @@ pub struct App {
 }
 
 impl App {
-    fn save(&self) -> anyhow::Result<()> {
+    pub fn save(&self) -> anyhow::Result<()> {
         self.data.save(&self.config.data_path)
     }
 }
@@ -34,6 +34,8 @@ pub struct AppData {
     pub channels: StatefulList<Channel>,
     #[serde(skip)]
     pub messages: StatefulList<Message>,
+    #[serde(skip)]
+    pub chanpos: ChannelPosition,
     pub input: String,
     #[serde(skip)]
     pub input_cursor: usize,
@@ -111,9 +113,17 @@ impl AppData {
             messages.state.select(Some(0));
         }
 
+        let chanpos = ChannelPosition {
+            top: 0,
+            upside: 0,
+            // value will be initialized in main.rs
+            downside: 0,
+        };
+
         Ok(AppData {
             channels,
             messages,
+            chanpos,
             input: String::new(),
             input_cursor: 0,
         })
@@ -143,7 +153,8 @@ pub struct Message {
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-pub enum Event<I> {
+pub enum Event<I, C> {
+    Click(C),
     Input(I),
     Message {
         /// used for debugging
@@ -151,7 +162,27 @@ pub enum Event<I> {
         /// some message if deserialized successfully
         message: Option<signal::Message>,
     },
-    Resize,
+    Resize {
+        cols: u16,
+        rows: u16,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChannelPosition {
+    pub top: usize,    // list index of channel at top of viewport
+    pub upside: u16,   // number of rows between selected channel and top of viewport
+    pub downside: u16, // number of rows between selected channel and bottom of viewport
+}
+
+impl Default for ChannelPosition {
+    fn default() -> ChannelPosition {
+        ChannelPosition {
+            top: 0,
+            upside: 0,
+            downside: 0,
+        }
+    }
 }
 
 impl App {
@@ -258,6 +289,26 @@ impl App {
         if self.reset_unread_messages() {
             self.save().unwrap();
         }
+
+        // when list is about to cycle from top to bottom
+        if self.data.channels.state.selected() == Some(0) {
+            self.data.chanpos.top =
+                self.data.channels.items.len() - self.data.chanpos.downside as usize - 1;
+            self.data.chanpos.upside = self.data.chanpos.downside;
+            self.data.chanpos.downside = 0;
+        } else {
+            // viewport scrolls up in list
+            if self.data.chanpos.upside == 0 {
+                if self.data.chanpos.top > 0 {
+                    self.data.chanpos.top -= 1;
+                }
+            // select scrolls up in viewport
+            } else {
+                self.data.chanpos.upside -= 1;
+                self.data.chanpos.downside += 1;
+            }
+        }
+
         self.data.channels.previous();
         self.load_messages();
     }
@@ -266,19 +317,35 @@ impl App {
         if self.reset_unread_messages() {
             self.save().unwrap();
         }
+
+        // viewport scrolls down in list
+        if self.data.chanpos.downside == 0 {
+            self.data.chanpos.top += 1;
+        // select scrolls down in viewport
+        } else {
+            self.data.chanpos.upside += 1;
+            self.data.chanpos.downside -= 1;
+        }
+
         self.data.channels.next();
         self.load_messages();
+
+        // when list has just cycled from bottom to top
+        if self.data.channels.state.selected() == Some(0) {
+            self.data.chanpos.top = 0;
+            self.data.chanpos.downside = self.data.chanpos.upside;
+            self.data.chanpos.upside = 0;
+        }
     }
 
     pub fn on_pgup(&mut self) {
         self.data.messages.next();
     }
-
     pub fn on_pgdn(&mut self) {
         self.data.messages.previous();
     }
 
-    fn reset_unread_messages(&mut self) -> bool {
+    pub fn reset_unread_messages(&mut self) -> bool {
         if let Some(selected_idx) = self.data.channels.state.selected() {
             if self.data.channels.items[selected_idx].unread_messages > 0 {
                 self.data.channels.items[selected_idx].unread_messages = 0;
